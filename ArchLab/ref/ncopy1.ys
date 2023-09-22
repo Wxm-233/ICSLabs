@@ -1,0 +1,211 @@
+# Yanjie Ze 519021910706
+# Zhenyu Tang 519021910891
+# 
+# score: 60/60, 8.93 (recent 10 tests: 8.92x7, 8.93x2, 8.91x1)
+#
+# idea: 
+# loop unrolling 6 times 
+# + solving load use hazard 
+# + binary search tree
+# + jumps rearrangement according to AT
+
+#/* $begin ncopy-ys */
+##################################################################
+# ncopy.ys - Copy a src block of len ints to dst.
+# Return the number of positive ints (>0) contained in src.
+#
+##################################################################
+# Do not modify this portion
+# Function prologue.
+ncopy: pushq %rbp # Save old frame pointer
+rrmovq %rsp,%rbp # Set up new frame pointer
+pushq %rsi # Save callee-save regs
+pushq %rbx
+pushq %rdi
+mrmovq 8(%rbp),%rbx # src
+mrmovq 16(%rbp),%rdx # len
+mrmovq 12(%rbp),%rcx # dst
+
+##################################################################
+# You can modify this portion
+# Loop header
+xorq %rax,%rax # count = 0;
+iaddq $-6, %rdx # len = len - 6
+jl restjudge # if len<0, goto rest:
+
+loop1: mrmovq (%rbx), %rsi # val1
+mrmovq 4(%rbx), %rdi # val2
+rmmovq %rsi, (%rcx) # store val1
+andq %rsi, %rsi # val1 <=0?
+jle loop2 # if so, go to next loop
+iaddq $1, %rax # count ++
+
+loop2: mrmovq 8(%rbx), %rsi # val1
+rmmovq %rdi, 4(%rcx) # store val2
+andq %rdi, %rdi # val2 <=0?
+jle loop3 # if so, go to next loop
+iaddq $1, %rax # count ++
+
+loop3: mrmovq 12(%rbx), %rdi # val2
+rmmovq %rsi, 8(%rcx) # store val1
+andq %rsi, %rsi # val1 <=0?
+jle loop4 # if so, go to next loop
+iaddq $1, %rax # count ++
+
+loop4: mrmovq 16(%rbx), %rsi # val1
+rmmovq %rdi, 12(%rcx) # store val2
+andq %rdi, %rdi # val2 <=0?
+jle loop5 # if so, go to next loop
+iaddq $1, %rax # count ++
+
+loop5: mrmovq 20(%rbx), %rdi # val2
+rmmovq %rsi, 16(%rcx) # store val1
+andq %rsi, %rsi # val1 <=0?
+jle loop6 # if so, go to next loop
+iaddq $1, %rax # count ++
+
+loop6: 
+rmmovq %rdi, 20(%rcx) # store val2
+andq %rdi, %rdi # val2 <=0?
+jle update # if so, go to update, since this is the final loop
+iaddq $1, %rax # count ++
+
+update: iaddq $24, %rbx # update
+iaddq $24, %rcx # update
+iaddq $-6, %rdx # len -= 6
+jge loop1 # if len >= 0, go to new loop1
+### rest loop ###
+# (Ze commented: the basic idea is to add back to the original value,
+#	then compared to find the corrrsponding unroll)
+#
+# binary search
+# (Tang commented: always taken strategy, 
+# suppose the data is uniformly distributed,
+# therefore rearranged the jumps)
+restjudge:
+	iaddq $3, %rdx # -5,-4,-3,-2,-1(1,2,3,4,5)
+	jl searchleft # jump to left tree (1,2)
+	jg searchright # jump to right tree (4,5)
+	jmp restloop3 # jump to 3
+searchright: # right tree(4,5)
+	iaddq $-1, %rdx
+	je restloop4
+	jmp restloop5
+searchleft: # left tree(1,2)
+	iaddq $2, %rdx
+	je restloop1
+	jg restloop2
+	jmp Done
+
+
+### search finish ###
+### begin unrolling ###
+restloop1: mrmovq (%rbx), %rsi 
+rmmovq %rsi, (%rcx)
+andq %rsi, %rsi
+jle Done # finish
+iaddq $1, %rax 
+jmp Done
+
+restloop2: mrmovq (%rbx), %rsi # val1
+mrmovq 4(%rbx), %rdi # val2
+rmmovq %rsi, (%rcx) # store val1
+andq %rsi, %rsi # val1 <=0?
+jle restloop21 # if so, go to next loop
+iaddq $1, %rax # count ++
+
+restloop21: rmmovq %rdi, 4(%rcx)
+andq %rdi, %rdi
+jle Done
+iaddq $1, %rax
+jmp Done
+
+restloop3: mrmovq (%rbx), %rsi # val1
+mrmovq 4(%rbx), %rdi # val2
+rmmovq %rsi, (%rcx) # store val1
+andq %rsi, %rsi # val1 <=0?
+jle restloop31 # if so, go to next loop
+iaddq $1, %rax # count ++
+
+restloop31: rmmovq %rdi, 4(%rcx) # store val2
+mrmovq 8(%rbx), %rsi #val1
+andq %rdi, %rdi
+jle restloop32
+iaddq $1, %rax
+
+restloop32: rmmovq %rsi, 8(%rcx)
+andq %rsi, %rsi
+jle Done
+iaddq $1, %rax
+jmp Done
+
+restloop4: mrmovq (%rbx), %rsi # val1
+mrmovq 4(%rbx), %rdi # val2
+rmmovq %rsi, (%rcx) # store val1
+andq %rsi, %rsi # val1 <=0?
+jle restloop41 # if so, go to next loop
+iaddq $1, %rax # count ++
+
+restloop41: rmmovq %rdi, 4(%rcx) # store val2
+mrmovq 8(%rbx), %rsi #val1
+andq %rdi, %rdi
+jle restloop42
+iaddq $1, %rax
+
+restloop42: rmmovq %rsi, 8(%rcx) # store val1
+mrmovq 12(%rbx), %rdi #val2
+andq %rsi, %rsi
+jle restloop43
+iaddq $1, %rax
+
+restloop43: rmmovq %rdi, 12(%rcx)
+andq %rdi, %rdi
+jle Done
+iaddq $1, %rax
+jmp Done
+
+restloop5: mrmovq (%rbx), %rsi # val1
+mrmovq 4(%rbx), %rdi # val2
+rmmovq %rsi, (%rcx) # store val1
+andq %rsi, %rsi # val1 <=0?
+jle restloop51 # if so, go to next loop
+iaddq $1, %rax # count ++
+
+restloop51: rmmovq %rdi, 4(%rcx) # store val2
+mrmovq 8(%rbx), %rsi #val1
+andq %rdi, %rdi
+jle restloop52
+iaddq $1, %rax
+
+restloop52: rmmovq %rsi, 8(%rcx) # store val1
+mrmovq 12(%rbx), %rdi #val2
+andq %rsi, %rsi
+jle restloop53
+iaddq $1, %rax
+
+restloop53: rmmovq %rdi, 12(%rcx) 
+mrmovq 16(%rbx), %rsi 
+andq %rdi, %rdi
+jle restloop54
+iaddq $1, %rax
+
+restloop54: rmmovq %rsi, 16(%rcx)
+andq %rsi, %rsi
+jle Done
+iaddq $1, %rax
+jmp Done
+
+##################################################################
+# Do not modify the following section of code
+# Function epilogue.
+Done:
+popq %rdi # Restore callee-save registers
+popq %rbx
+popq %rsi
+rrmovq %rbp, %rsp
+popq %rbp
+ret
+##################################################################
+# Keep the following label at the end of your function
+End:
+#/* $end ncopy-ys */

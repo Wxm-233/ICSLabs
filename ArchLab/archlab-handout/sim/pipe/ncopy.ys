@@ -1,0 +1,201 @@
+#/* $begin ncopy-ys */
+##################################################################
+# ncopy.ys - Copy a src block of len words to dst.
+# Return the number of positive words (>0) contained in src.
+#
+# Include your name and ID here.
+# 
+# Name: Li Tianyu
+# ID: 2200013188
+#
+# Describe how and why you modified the baseline code.
+#
+# I rewrite the whole Y86 code
+# First decide whether len < 10, if so then go to the lessthan10 part
+# Then run the unrolled 10 * 1 loop
+# the lessthan10 part can also be used to handle things after the loop
+# Lrx is for 'Loop remains x elements', rx for the same
+# Also, I add IADDQ instruction into the Y86 ISA, which reduces instruction number
+# modified some branches to make it easier to be predicted
+# but why at the beginning jl instruction performs better?
+# ternary tree search is used, besides some tricky implementations are used
+##################################################################
+# Do not modify this portion
+# Function prologue.
+# %rdi = src, %rsi = dst, %rdx = len
+ncopy:
+
+##################################################################
+# You can modify this portion
+	# xorq %rax, %rax
+	iaddq $-10, %rdx
+	jl restjudge
+Loop:
+	mrmovq (%rdi), %r8
+	mrmovq 8(%rdi), %r9
+	mrmovq 16(%rdi), %r10
+	mrmovq 24(%rdi), %r11
+	mrmovq 32(%rdi), %r12
+	mrmovq 40(%rdi), %r13
+	mrmovq 48(%rdi), %r14
+	mrmovq 56(%rdi), %rcx
+	mrmovq 64(%rdi), %rbx
+	mrmovq 72(%rdi), %rbp
+
+	rmmovq %r8, (%rsi)
+	rmmovq %r9, 8(%rsi)	
+	rmmovq %r10, 16(%rsi)
+	rmmovq %r11, 24(%rsi)
+	rmmovq %r12, 32(%rsi)
+	rmmovq %r13, 40(%rsi)
+	rmmovq %r14, 48(%rsi)
+	rmmovq %rcx, 56(%rsi)
+	rmmovq %rbx, 64(%rsi)
+	rmmovq %rbp, 72(%rsi)
+	# read and write from and to the register
+Lr1:
+	andq %r8, %r8
+	jle Lr2
+	iaddq $1, %rax
+Lr2:	
+	andq %r9, %r9
+	jle Lr3
+	iaddq $1, %rax
+Lr3:	
+	andq %r10, %r10
+	jle Lr4
+	iaddq $1, %rax
+Lr4:
+	andq %r11, %r11
+	jle Lr5
+	iaddq $1, %rax
+Lr5:
+	andq %r12, %r12
+	jle Lr6
+	iaddq $1, %rax
+Lr6:
+	andq %r13, %r13
+	jle Lr7
+	iaddq $1, %rax
+Lr7:
+	andq %r14, %r14
+	jle Lr8
+	iaddq $1, %rax
+Lr8:
+	andq %rcx, %rcx
+	jle Lr9
+	iaddq $1, %rax
+Lr9:
+	andq %rbx, %rbx
+	jle Lr10
+	iaddq $1, %rax
+Lr10:
+	andq %rbp, %rbp
+	jle loopend
+	iaddq $1, %rax
+# simple judgements
+loopend:
+	iaddq $80, %rdi
+	iaddq $80, %rsi	
+test:
+	iaddq $-10, %rdx
+	jge Loop
+lessthan10:
+restjudge: 
+# we know that (x % 10) has a higher probability of being numbers between 0 and 4
+# so when searching, I select 3 as a pivot
+	iaddq $7, %rdx # 3 as the pivot
+	jl search012
+	jg searchright
+	jmp r3
+searchright: # 6 as the pivot
+	iaddq $-3, %rdx
+	jg search789
+	je r6
+	iaddq $1, %rdx
+	je r5
+	jmp r4
+search012: # search among r0,r1,r2 (r0 = Done)
+	iaddq $2, %rdx
+	je r1
+	iaddq $-1, %rdx
+	je r2
+	ret # jump directly to the Done area, quite tricky
+search789: # search among r7, r8, r9
+	iaddq $-2, %rdx
+	jl r7
+	je r8
+# r9 as the default value
+lessthan10:
+r9:
+	mrmovq 64(%rdi), %rbx
+	andq %rbx, %rbx
+	rmmovq %rbx, 64(%rsi)
+r8:
+	mrmovq 56(%rdi), %rcx
+	jle r8if
+	iaddq $1, %rax
+r8if:
+	andq %rcx, %rcx
+	rmmovq %rcx, 56(%rsi)
+r7:
+	mrmovq 48(%rdi), %r13
+	jle r7if
+	iaddq $1, %rax
+r7if:
+	andq %r13, %r13
+	rmmovq %r13, 48(%rsi)
+r6:
+	mrmovq 40(%rdi), %r14
+	jle r6if
+	iaddq $1, %rax
+r6if:
+	andq %r14, %r14
+	rmmovq %r14, 40(%rsi)
+r5:
+	mrmovq 32(%rdi), %r8
+	jle r5if
+	iaddq $1, %rax
+r5if:
+	andq %r8, %r8
+	rmmovq %r8, 32(%rsi)
+r4:
+	mrmovq 24(%rdi), %r9
+	jle r4if
+	iaddq $1, %rax
+r4if:
+	andq %r9, %r9
+	rmmovq %r9, 24(%rsi)
+r3:
+	mrmovq 16(%rdi), %r10
+	jle r3if
+	iaddq $1, %rax
+r3if:
+	andq %r10, %r10
+	rmmovq %r10, 16(%rsi)
+r2:
+	mrmovq 8(%rdi), %r11
+	jle r2if
+	iaddq $1, %rax
+r2if:
+	andq %r11, %r11
+	rmmovq %r11, 8(%rsi)
+r1:
+	mrmovq (%rdi), %r12
+	jle r1if
+	iaddq $1, %rax
+r1if:
+	andq %r12, %r12
+	rmmovq %r12, (%rsi)
+	jle Done
+	iaddq $1, %rax
+# repetitive stuffs
+##################################################################
+# Do not modify the following section of code
+# Function epilogue.
+Done:
+	ret
+##################################################################
+# Keep the following label at the end of your function
+End:
+#/* $end ncopy-ys */

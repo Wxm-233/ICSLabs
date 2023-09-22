@@ -1,0 +1,154 @@
+#######################################################################
+# Test for copying block of size 4;
+#######################################################################
+	.pos 0
+main:	irmovq Stack, %rsp  	# Set up stack pointer
+
+	# Set up arguments for copy function and then invoke it
+	irmovq $4, %rdx		# src and dst have 4 elements
+	irmovq dest, %rsi	# dst array
+	irmovq src, %rdi	# src array
+	call ncopy		 
+	halt			# should halt with num nonzeros in %rax
+StartFun:
+#/* $begin ncopy-ys */
+##################################################################
+# ncopy.ys - Copy a src block of len words to dst.
+# Return the number of positive words (>0) contained in src.
+#
+# Include your name and ID here.
+# 
+# Name: Li Tianyu
+# ID: 2200013188
+#
+# Describe how and why you modified the baseline code.
+#
+# I rewrite the whole Y86 code
+# First decide whether len < 4, if so then go to the lessthan4 part
+# Then run the unrolled 4 * 1 loop
+# the lessthan4 part can also be used to handle things after the loop
+# Lrx is for 'Loop remains x elements', rx for the same
+#
+# Also, I add IADDQ instruction into the Y86 ISA, which reduces instruction number
+#
+##################################################################
+# Do not modify this portion
+# Function prologue.
+# %rdi = src, %rsi = dst, %rdx = len
+ncopy:
+
+##################################################################
+# You can modify this portion
+	xorq %rax, %rax
+	iaddq $-4, %rdx
+	jl lessthan4
+Loop:
+	iaddq $4, %rdx
+	mrmovq (%rdi), %r10
+	andq %r10, %r10
+	rmmovq %r10, (%rsi)
+	jle Lr2
+	iaddq $1, %rax
+Lr2:
+	mrmovq 8(%rdi), %r10
+	andq %r10, %r10
+	rmmovq %r10, 8(%rsi)
+	jle Lr1
+	iaddq $1, %rax
+Lr1:
+	mrmovq 16(%rdi), %r10
+	andq %r10, %r10
+	rmmovq %r10, 16(%rsi)
+	jle Lr0
+	iaddq $1, %rax
+Lr0:
+	mrmovq 24(%rdi), %r10
+	iaddq $32, %rdi
+	rmmovq %r10, 24(%rsi)
+	iaddq $32, %rsi
+	iaddq $-4, %rdx
+	andq %r10, %r10
+	jle test
+	iaddq $1, %rax
+test:
+	iaddq $-4, %rdx
+	jge Loop
+lessthan4:
+	iaddq $4, %rdx
+	mrmovq (%rdi), %r10
+	jle Done
+	andq %r10, %r10
+	rmmovq %r10, (%rsi)
+	jle r2
+	iaddq $1, %rax
+r2:
+	iaddq $-1, %rdx
+	mrmovq 8(%rdi), %r10
+	jle Done
+	andq %r10, %r10
+	rmmovq %r10, 8(%rsi)
+	jle r1
+	iaddq $1, %rax
+r1:
+	iaddq $-1, %rdx
+	mrmovq 16(%rdi), %r10
+	jle Done
+	andq %r10, %r10
+	rmmovq %r10, 16(%rsi)
+	jle Done
+	iaddq $1, %rax
+
+
+##################################################################
+# Do not modify the following section of code
+# Function epilogue.
+Done:
+	ret
+##################################################################
+# Keep the following label at the end of your function
+End:
+#/* $end ncopy-ys */
+EndFun:
+
+###############################
+# Source and destination blocks 
+###############################
+	.align 8
+src:
+	.quad 1
+	.quad -2
+	.quad -3
+	.quad 4
+	.quad 0xbcdefa # This shouldn't get moved
+
+	.align 16
+Predest:
+	.quad 0xbcdefa
+dest:
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+	.quad 0xcdefab
+Postdest:
+	.quad 0xdefabc
+
+.align 8
+# Run time stack
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+	.quad 0
+
+Stack:

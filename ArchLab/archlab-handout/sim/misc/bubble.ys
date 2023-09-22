@@ -1,0 +1,68 @@
+# Name: Li Tianyu
+# ID: 2200013188
+
+# Execution begins at address 0
+    .pos 0
+    irmovq stack,%rsp
+    call main
+    halt
+
+# array to be sorted
+    .align 8
+Array:
+    .quad 0xbca
+    .quad 0xcba
+    .quad 0xacb
+    .quad 0xcab
+    .quad 0xabc
+    .quad 0xbac
+
+main:
+    irmovq Array,%rdi
+    irmovq $6,%rsi
+    call bubble_sort
+    ret
+
+# bubble_sort(long *data, long count)
+# data in %rdi, count in %rsi
+
+bubble_sort:
+    rrmovq %rdi,%rax # last in %rax
+    addq %rsi,%rsi
+    addq %rsi,%rsi
+    addq %rsi,%rsi # i * 8
+    addq %rsi,%rax
+    irmovq $8,%r8
+    subq %r8,%rax # last = data + count - 1
+    jmp test
+loop:
+    rrmovq %rdi,%rdx # i in %rdx
+    jmp test2
+loop2:
+    rrmovq %rdx,%r9
+    mrmovq (%r9),%r10 # *i in %r10
+    irmovq $8,%r8
+    addq %r8,%r9 # i + 1 in %r9
+    mrmovq (%r9),%r11 # *(i + 1) in %r11
+    rrmovq %r11,%r12
+    subq %r10,%r12
+    jge else
+    rmmovq %r11,(%rdx)
+    rmmovq %r10,(%r9)
+else:
+    irmovq $8,%r8
+    addq %r8,%rdx
+test2:
+    rrmovq %rdx,%rcx
+    subq %rax,%rcx
+    jl loop2
+    irmovq $8,%r8
+    subq %r8,%rax
+test:
+    rrmovq %rax,%r8
+    subq %rdi,%r8
+    jg loop
+    ret
+
+    .pos 0x200
+stack:
