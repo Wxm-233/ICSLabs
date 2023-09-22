@@ -174,7 +174,13 @@ NOTES:
  *   Rating: 1
  */
 int bitXnor(int x, int y) {
-  return 2;
+/*
+ * ~((x | y) & (~(x & y)))
+ * = ~(x | y) | (x & y)
+ */
+  int z = x | y;
+  int w = x & y;
+  return ~z | w;
 }
 /* 
  * bitConditional - x ? y : z for each bit respectively
@@ -184,7 +190,17 @@ int bitXnor(int x, int y) {
  *   Rating: 1
  */
 int bitConditional(int x, int y, int z) {
-  return 2;
+/*
+ *    0  1
+ * 0  z  0
+ * 1  z  1
+ * 
+ * x & y gives the right column, while z is given by ~x & z
+ * P.S. I don't know how 3 ops can make it
+ */
+  int a = x & y;
+  int b = ~x & z;
+  return a | b;
 }
 /* 
  * byteSwap - swaps the nth byte and the mth byte
@@ -196,7 +212,17 @@ int bitConditional(int x, int y, int z) {
  *  Rating: 2
  */
 int byteSwap(int x, int n, int m) {
-    return 2;
+/*
+ * Already clear in the code
+ */
+  int f = 0xff;
+  int nthByte = (x >> n) & f;
+  int mthByte = (x >> m) & f;
+  x |= (f << n);
+  x |= (f << m);
+  x &= (nthByte << m);
+  x &= (mthByte << n);
+  return x;
 }
 /* 
  * logicalShift - shift x to the right by n, using a logical shift
@@ -207,7 +233,14 @@ int byteSwap(int x, int n, int m) {
  *   Rating: 3
  */
 int logicalShift(int x, int n) {
-  return 2;
+/*
+ * First shift x arithmetically, then fill the left with 0s
+ */
+  x = x >> n;
+  int i = 1 << 31;
+  int n1 = i >> 31;
+  x = x & ~(i >> (n + n1));
+  return x;
 }
 /* 
  * cleanConsecutive1 - change any consecutive 1 to zeros in the binary form of x.
