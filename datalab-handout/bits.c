@@ -174,7 +174,13 @@ NOTES:
  *   Rating: 1
  */
 int bitXnor(int x, int y) {
-  return 2;
+/*
+ * ~((x | y) & (~(x & y)))
+ * = ~(x | y) | (x & y)
+ */
+  int z = x | y;
+  int w = x & y;
+  return ~z | w;
 }
 /* 
  * bitConditional - x ? y : z for each bit respectively
@@ -184,7 +190,23 @@ int bitXnor(int x, int y) {
  *   Rating: 1
  */
 int bitConditional(int x, int y, int z) {
-  return 2;
+/*
+ *   x  0  1
+ * y
+ * 0    z  0
+ * 1    z  1
+ * 
+ *   x  0  1
+ * z
+ * 0    0  y
+ * 1    1  y
+ * 
+ * for the first chart, x & y gives the right column, while z is given by ~x & z
+ * P.S. I don't know how 3 ops can make it
+ */
+  int a = x & y;
+  int b = ~x & z;
+  return a | b;
 }
 /* 
  * byteSwap - swaps the nth byte and the mth byte
@@ -196,7 +218,19 @@ int bitConditional(int x, int y, int z) {
  *  Rating: 2
  */
 int byteSwap(int x, int n, int m) {
-    return 2;
+/*
+ * Already clear in the code
+ */
+  int f = 0xff;
+  int n8 = n << 3;
+  int m8 = m << 3;
+  int nthByte = (x >> n8) & f;
+  int mthByte = (x >> m8) & f;
+  x &= ~(f << n8);
+  x &= ~(f << m8);
+  x |= (nthByte << m8);
+  x |= (mthByte << n8);
+  return x;
 }
 /* 
  * logicalShift - shift x to the right by n, using a logical shift
@@ -207,7 +241,16 @@ int byteSwap(int x, int n, int m) {
  *   Rating: 3
  */
 int logicalShift(int x, int n) {
-  return 2;
+/*
+ * First shift x arithmetically, then fill the left with 0s
+ * Condition when n = 0 needs considering specially
+ */
+  x = x >> n;
+  int i = 1 << 31;
+  int n1 = i >> 31;
+  int judge = (!n << 31) >> 31;
+  x = x & (~(i >> (n + n1)) | judge);
+  return x;
 }
 /* 
  * cleanConsecutive1 - change any consecutive 1 to zeros in the binary form of x.
@@ -221,7 +264,11 @@ int logicalShift(int x, int n) {
  *   Rating: 4
  */
 int cleanConsecutive1(int x){
-    return 2;
+/*
+ * Easy to figure out y, but using y as the mask is a bit tricky
+ */
+    int y = x ^ (x << 1);
+    return x & y & (y >> 1);
 }
 /*
  * leftBitCount - returns count of number of consective 1's in
@@ -232,7 +279,36 @@ int cleanConsecutive1(int x){
  *   Rating: 4
  */
 int leftBitCount(int x) {
-  return 2;
+/*
+ * dichotomy
+ * mids are criteria deciding the halves to choose and the bits to add
+ * some tricks are used to reduce the oprands
+ */
+  int totalBits = 0;
+  int mid1 = (x >> 16) + 1;
+  int bits1 = !mid1 << 4;
+  totalBits += bits1;
+  int x16 = x << bits1;
+  int mid2 = (x16 >> 24) + 1;
+  int bits2 = !mid2 << 3;
+  totalBits += bits2;
+  int x8 = x16 << bits2;
+  int mid3 = (x8 >> 28) + 1;
+  int bits3 = !mid3 << 2;
+  totalBits += bits3;
+  int x4 = x8 << bits3;
+  int mid4 = (x4 >> 30) + 1;
+  int bits4 = !mid4 << 1;
+  totalBits += bits4;
+  int x2 = x4 << bits4;
+  int mid5 = (x2 >> 31) + 1;
+  int bits5 = !mid5;
+  totalBits += bits5;
+  int x1 = x2 << bits5;
+  int mid6 = (x1 >> 31) + 1;
+  int bits6 = !mid6;
+  totalBits += bits6;
+  return totalBits;
 }
 /* 
  * counter1To5 - return 1 + x if x < 5, return 1 otherwise, we ensure that 1<=x<=5
@@ -242,7 +318,13 @@ int leftBitCount(int x) {
  *   Rating: 2
  */
 int counter1To5(int x) {
-  return 2;
+/*
+ * just judge whether x = 5
+ * then use bitConditional()
+ */
+  int criteria = (x >> 2) & x & 1;
+  int mask = (criteria << 31) >> 31;
+  return (mask & 1) | (~mask & (1 + x));
 }
 /* 
  * sameSign - return 1 if x and y have same sign, and 0 otherwise
@@ -252,7 +334,10 @@ int counter1To5(int x) {
  *   Rating: 2
  */
 int sameSign(int x, int y) {
-  return 2;
+/*
+ * Easy one
+ */
+  return !(((x ^ y) >> 31) & 1);
 }
 /*
  * satMul3 - multiplies by 3, saturating to Tmin or Tmax if overflow
@@ -266,7 +351,17 @@ int sameSign(int x, int y) {
  *  Rating: 3
  */
 int satMul3(int x) {
-    return 2;
+    int sign = x >> 31;
+    int Tmin = 1 << 31;
+    int Tmax = ~Tmin;
+    int Tminmax = Tmax ^ sign;
+    int y = x + x;
+    int sign1 = (x ^ y) >> 31;
+    y = (sign1 & Tminmax) | (~sign1 & y);
+    int z = y + x;
+    int sign2 = (x ^ z) >> 31;
+    z = (sign2 & Tminmax) | (~sign2 & z);
+    return z;
 }
 /* 
  * isGreater - if x > y  then return 1, else return 0 
@@ -276,7 +371,10 @@ int satMul3(int x) {
  *   Rating: 3
  */
 int isGreater(int x, int y) {
-  return 2;
+  int sign = (x ^ y) >> 31; //0x00000000 when same sign, otherwise 0xffffffff
+  int resultSign = (x + ~y) >> 31;
+  int xSign = x >> 31;
+  return !((sign & xSign) | (~sign & resultSign));
 }
 /* 
  * subOK - Determine if can compute x-y without overflow
