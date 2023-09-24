@@ -175,11 +175,20 @@ NOTES:
  */
 int bitXnor(int x, int y) {
 /*
+<<<<<<< HEAD
  * can see clearly from a chart
  */
   int z = x | y;
   int w = ~x | ~y;
   return ~z | ~w;
+=======
+ * ~((x | y) & (~(x & y)))
+ * = ~(x | y) | (x & y)
+ */
+  int z = x | y;
+  int w = x & y;
+  return ~z | w;
+>>>>>>> f1805bb92edf9575187084862dd168c6d2739eb4
 }
 /* 
  * bitConditional - x ? y : z for each bit respectively
@@ -190,6 +199,7 @@ int bitXnor(int x, int y) {
  */
 int bitConditional(int x, int y, int z) {
 /*
+<<<<<<< HEAD
  *   x  0  1
  * y
  * 0    z  0
@@ -201,6 +211,13 @@ int bitConditional(int x, int y, int z) {
  * 1    1  y
  * 
  * for the first chart, x & y gives the right column, while z is given by ~x & z
+=======
+ *    0  1
+ * 0  z  0
+ * 1  z  1
+ * 
+ * x & y gives the right column, while z is given by ~x & z
+>>>>>>> f1805bb92edf9575187084862dd168c6d2739eb4
  * P.S. I don't know how 3 ops can make it
  */
   int a = x & y;
@@ -218,6 +235,7 @@ int bitConditional(int x, int y, int z) {
  */
 int byteSwap(int x, int n, int m) {
 /*
+<<<<<<< HEAD
  * xor is great
  */
   int f = 0xff;
@@ -228,6 +246,17 @@ int byteSwap(int x, int n, int m) {
   int xor = (nthByte ^ mthByte) & f;
   x ^= (xor << m8);
   x ^= (xor << n8);
+=======
+ * Already clear in the code
+ */
+  int f = 0xff;
+  int nthByte = (x >> n) & f;
+  int mthByte = (x >> m) & f;
+  x |= (f << n);
+  x |= (f << m);
+  x &= (nthByte << m);
+  x &= (mthByte << n);
+>>>>>>> f1805bb92edf9575187084862dd168c6d2739eb4
   return x;
 }
 /* 
@@ -241,6 +270,7 @@ int byteSwap(int x, int n, int m) {
 int logicalShift(int x, int n) {
 /*
  * First shift x arithmetically, then fill the left with 0s
+<<<<<<< HEAD
  * Condition when n = 0 needs considering specially
  */
   int i, n1, judge;
@@ -249,6 +279,13 @@ int logicalShift(int x, int n) {
   n1 = i >> 31;
   judge = (!n << 31) >> 31;
   x = x & (~(i >> (n + n1)) | judge);
+=======
+ */
+  x = x >> n;
+  int i = 1 << 31;
+  int n1 = i >> 31;
+  x = x & ~(i >> (n + n1));
+>>>>>>> f1805bb92edf9575187084862dd168c6d2739eb4
   return x;
 }
 /* 
