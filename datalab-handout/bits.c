@@ -175,12 +175,11 @@ NOTES:
  */
 int bitXnor(int x, int y) {
 /*
- * ~((x | y) & (~(x & y)))
- * = ~(x | y) | (x & y)
+ * can see clearly from a chart
  */
   int z = x | y;
-  int w = x & y;
-  return ~z | w;
+  int w = ~x | ~y;
+  return ~z | ~w;
 }
 /* 
  * bitConditional - x ? y : z for each bit respectively
@@ -219,17 +218,16 @@ int bitConditional(int x, int y, int z) {
  */
 int byteSwap(int x, int n, int m) {
 /*
- * Already clear in the code
+ * xor is great
  */
   int f = 0xff;
   int n8 = n << 3;
   int m8 = m << 3;
-  int nthByte = (x >> n8) & f;
-  int mthByte = (x >> m8) & f;
-  x &= ~(f << n8);
-  x &= ~(f << m8);
-  x |= (nthByte << m8);
-  x |= (mthByte << n8);
+  int nthByte = x >> n8;
+  int mthByte = x >> m8;
+  int xor = (nthByte ^ mthByte) & f;
+  x ^= (xor << m8);
+  x ^= (xor << n8);
   return x;
 }
 /* 
@@ -245,10 +243,11 @@ int logicalShift(int x, int n) {
  * First shift x arithmetically, then fill the left with 0s
  * Condition when n = 0 needs considering specially
  */
+  int i, n1, judge;
   x = x >> n;
-  int i = 1 << 31;
-  int n1 = i >> 31;
-  int judge = (!n << 31) >> 31;
+  i = 1 << 31;
+  n1 = i >> 31;
+  judge = (!n << 31) >> 31;
   x = x & (~(i >> (n + n1)) | judge);
   return x;
 }
@@ -283,30 +282,34 @@ int leftBitCount(int x) {
  * dichotomy
  * mids are criteria deciding the halves to choose and the bits to add
  * some tricks are used to reduce the oprands
+ * at last, counting bit by bit is no more efficient
  */
   int totalBits = 0;
-  int mid1 = (x >> 16) + 1;
-  int bits1 = !mid1 << 4;
-  totalBits += bits1;
-  int x16 = x << bits1;
-  int mid2 = (x16 >> 24) + 1;
-  int bits2 = !mid2 << 3;
+  int mid1, mid2, mid3, mid4, mid5, mid6;
+  int bits1, bits2, bits3, bits4, bits5, bits6;
+  int x16, x8, x4, x2, x1;
+  mid1 = (x >> 16) + 1;
+  bits1 = !mid1 << 4;
+  totalBits = totalBits + bits1;
+  x16 = x << bits1;
+  mid2 = (x16 >> 24) + 1;
+  bits2 = !mid2 << 3;
   totalBits += bits2;
-  int x8 = x16 << bits2;
-  int mid3 = (x8 >> 28) + 1;
-  int bits3 = !mid3 << 2;
+  x8 = x16 << bits2;
+  mid3 = (x8 >> 28) + 1;
+  bits3 = !mid3 << 2;
   totalBits += bits3;
-  int x4 = x8 << bits3;
-  int mid4 = (x4 >> 30) + 1;
-  int bits4 = !mid4 << 1;
+  x4 = x8 << bits3;
+  mid4 = (x4 >> 30) + 1;
+  bits4 = !mid4 << 1;
   totalBits += bits4;
-  int x2 = x4 << bits4;
-  int mid5 = (x2 >> 31) + 1;
-  int bits5 = !mid5;
+  x2 = x4 << bits4;
+  mid5 = (x2 >> 31) + 1;
+  bits5 = !mid5;
   totalBits += bits5;
-  int x1 = x2 << bits5;
-  int mid6 = (x1 >> 31) + 1;
-  int bits6 = !mid6;
+  x1 = x2 << bits5;
+  mid6 = (x1 >> 31) + 1;
+  bits6 = !mid6;
   totalBits += bits6;
   return totalBits;
 }
@@ -322,8 +325,10 @@ int counter1To5(int x) {
  * just judge whether x = 5
  * then use bitConditional()
  */
-  int criteria = (x >> 2) & x & 1;
+  int criteria = (x + 3) >> 3;
   int mask = (criteria << 31) >> 31;
+  // int criteria = (x >> 2) & x & 1;
+  // int mask = (criteria << 31) >> 31;
   return (mask & 1) | (~mask & (1 + x));
 }
 /* 
@@ -351,15 +356,20 @@ int sameSign(int x, int y) {
  *  Rating: 3
  */
 int satMul3(int x) {
+/*
+ * x + x + x
+ * after each plus detect whether the result overflows
+ */
     int sign = x >> 31;
     int Tmin = 1 << 31;
     int Tmax = ~Tmin;
     int Tminmax = Tmax ^ sign;
     int y = x + x;
     int sign1 = (x ^ y) >> 31;
+    int z, sign2;
     y = (sign1 & Tminmax) | (~sign1 & y);
-    int z = y + x;
-    int sign2 = (x ^ z) >> 31;
+    z = y + x;
+    sign2 = (x ^ z) >> 31;
     z = (sign2 & Tminmax) | (~sign2 & z);
     return z;
 }
@@ -371,6 +381,10 @@ int satMul3(int x) {
  *   Rating: 3
  */
 int isGreater(int x, int y) {
+/*
+ * if not the same sign, the positive one is bigger
+ * else see if x - y > 0, which means (x - y - 1) is non-negative
+ */
   int sign = (x ^ y) >> 31; //0x00000000 when same sign, otherwise 0xffffffff
   int resultSign = (x + ~y) >> 31;
   int xSign = x >> 31;
@@ -385,7 +399,10 @@ int isGreater(int x, int y) {
  *   Rating: 3
  */
 int subOK(int x, int y) {
-  return 2;
+/*
+ * Either x and y have same signs or x and z(the result) has same signs is OK
+ */
+  return !(((x ^ y) >> 31) & ((x ^ (x + ~y + 1)) >> 31));
 }
 /*
  * trueFiveEighths - multiplies by 5/8 rounding toward 0,
@@ -399,7 +416,19 @@ int subOK(int x, int y) {
  */
 int trueFiveEighths(int x)
 {
-    return 2;
+/*
+ * just notice that the function needs to round the result toward 0
+ * so positive ones and negative ones are different, the latter one needs a bias
+ */
+    int low3 = x & 7;
+    int high31 = x >> 3;
+    int sign, bias;
+    high31 = high31 + (high31 << 2);
+    low3 = low3 + (low3 << 2);
+    sign = x >> 31;
+    bias = sign & 7;
+    low3 = (low3 + bias) >> 3;
+    return low3 + high31;
 }
 /* 
  * float_half - Return bit-level equivalent of expression 0.5*f for
@@ -413,7 +442,23 @@ int trueFiveEighths(int x)
  *   Rating: 4
  */
 unsigned float_half(unsigned uf) {
-  return 2;
+/*
+ * when I was writing this function I did not really understand the IEEE rounding principles
+ */
+  unsigned exp = (uf >> 23) & 0xff;
+  unsigned emask = ~(0xff << 23);
+  unsigned frac = uf & 0x7fffff;
+  unsigned fmask = ~(0x7fffff);
+  unsigned halfFrac = frac >> 1;
+  unsigned result = 0;
+  halfFrac += halfFrac & 1 & frac;
+  if (!(~exp & 0xff)) return uf;
+  if (!exp) {
+    return (uf & fmask) | halfFrac;
+  }
+  result = (uf & emask) | ((exp-1) << 23);
+  if (exp > 1) return result;
+  return (result & fmask) | (halfFrac + 0x400000);
 }
 /* 
  * float_i2f - Return bit-level equivalent of expression (float) x
@@ -424,9 +469,40 @@ unsigned float_half(unsigned uf) {
  *   Max ops: 30
  *   Rating: 4
  */
+
 unsigned float_i2f(int x) {
-  return 2;
+/*
+ * until this time when I was stuck here, trying to figure out it
+ * I finally understood the principle
+ */
+  int TMin = 0x80000000;
+  unsigned result = 0;
+  unsigned n0 = 0;
+  unsigned e = 0;
+  unsigned m = 0;
+  unsigned discardedBits = 0;
+  int flag;
+  if (x == 0) return 0;
+  if (x < 0) {
+    result |= TMin;
+    x = -x;
+  }
+  m = x;
+  while (1) {
+    if (m & TMin) break;
+    m = m << 1;
+    n0++;
+  }
+  e = 158 - n0;
+  m = m << 1;
+  discardedBits = m & 0x1ff;
+  flag = discardedBits > 0x100 || (discardedBits == 0x100 && (m & 0x200));
+  result |= (e << 23);
+  result |= (m >> 9);
+  result += flag;
+  return result;
 }
+
 /* 
  * float64_f2i - Return bit-level equivalent of expression (int) f
  *   for 64 bit floating point argument f.
@@ -441,7 +517,23 @@ unsigned float_i2f(int x) {
  *   Rating: 4
  */
 int float64_f2i(unsigned uf1, unsigned uf2) {
-  return 2;
+/*
+ * when E = 31, there is only one condition where the result is not out of range
+ * this number is just TMin, so I merged it
+ */
+  unsigned TMin = 0x80000000u;
+  int result;
+  int sign = uf2 & TMin;
+  unsigned exp = (uf2 >> 20) & 0x7ff;
+  int E = exp - 1023;
+  unsigned frac = (uf2 << 11) | ((uf1 >> 21) & 0x7ff);
+  unsigned M = frac | TMin;
+  if (E >= 0 && E < 31) {
+    result = M >> (31 - E);
+    return sign ? -result : result;
+  }
+  if (E < 0) return 0;
+  return TMin;
 }
 /* 
  * float_negpwr2 - Return bit-level equivalent of the expression 2.0^-x
@@ -457,5 +549,11 @@ int float64_f2i(unsigned uf1, unsigned uf2) {
  *   Rating: 4
  */
 unsigned float_negpwr2(int x) {
-    return 2;
+/*
+ * make a chart
+ */
+  if (x > 0x95) return 0;
+  if (x > 0x7c) return 0x1000000 >> (x - 0x7d);
+  if (x < -127) return 0x7f800000;
+  return 0x1000000 + (0x7f - x) << 23;
 }
